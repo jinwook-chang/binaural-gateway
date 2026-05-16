@@ -7,7 +7,7 @@ Gateway Signal is a binaural tone page inspired by the CIA Gateway Process docum
 - `Beat`: The left-right frequency difference. This is the perceived binaural rhythm.
 - `Carrier`: The center pitch used to create the left and right tones.
 - `Volume`: Output level. Start low.
-- `Signal Drift`: Slowly modulates the carrier by a small amount while keeping the beat difference intact.
+- `Signal Drift`: Slowly modulates the carrier by up to 8 Hz while keeping the beat difference intact.
 
 Recommended beat presets:
 

@@ -1,7 +1,7 @@
 const FIXED_GATEWAY_BEAT = 7.5;
 const INTERNAL_TONE_LEVEL = 0.18;
-const DRIFT_DEPTH_HZ = 3;
-const DRIFT_SPEED = 0.035;
+const DRIFT_DEPTH_HZ = 8;
+const DRIFT_SPEED = 0.14;
 const beatPresets = new Map([
   ["4", "Deep Theta"],
   ["6", "Theta Drift"],
@@ -169,6 +169,7 @@ async function enterConsole() {
 
 function animate() {
   if (engine && playing) {
+    updateLabels();
     const leftScale = Math.max(0.08, Math.min(1, engine.leftRms * 46));
     const rightScale = Math.max(0.08, Math.min(1, engine.rightRms * 46));
     els.leftMeter.style.transform = `scaleX(${leftScale})`;
