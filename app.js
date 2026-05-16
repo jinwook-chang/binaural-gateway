@@ -93,43 +93,55 @@ function updateLabels() {
 
 function createEngine() {
   const context = new AudioContext();
-  const bufferSize = 2048;
-  const node = context.createScriptProcessor(bufferSize, 0, 2);
+  const leftOsc = context.createOscillator();
+  const rightOsc = context.createOscillator();
+  const leftGain = context.createGain();
+  const rightGain = context.createGain();
+  const merger = context.createChannelMerger(2);
+  const params = getParams();
+
+  leftOsc.type = "sine";
+  rightOsc.type = "sine";
+  leftOsc.frequency.setValueAtTime(params.leftFreq, context.currentTime);
+  rightOsc.frequency.setValueAtTime(params.rightFreq, context.currentTime);
+  leftGain.gain.setValueAtTime(0, context.currentTime);
+  rightGain.gain.setValueAtTime(0, context.currentTime);
+
+  leftOsc.connect(leftGain);
+  rightOsc.connect(rightGain);
+  leftGain.connect(merger, 0, 0);
+  rightGain.connect(merger, 0, 1);
+  merger.connect(context.destination);
+  leftOsc.start();
+  rightOsc.start();
+
   const state = {
     context,
-    node,
-    leftPhase: 0,
-    rightPhase: 0,
+    leftOsc,
+    rightOsc,
+    leftGain,
+    rightGain,
     leftRms: 0,
     rightRms: 0,
   };
-
-  node.onaudioprocess = (event) => {
-    const params = getParams();
-    const left = event.outputBuffer.getChannelData(0);
-    const right = event.outputBuffer.getChannelData(1);
-    const leftStep = (2 * Math.PI * params.leftFreq) / context.sampleRate;
-    const rightStep = (2 * Math.PI * params.rightFreq) / context.sampleRate;
-    let leftEnergy = 0;
-    let rightEnergy = 0;
-
-    for (let i = 0; i < left.length; i += 1) {
-      const l = Math.sin(state.leftPhase) * INTERNAL_TONE_LEVEL * params.volume;
-      const r = Math.sin(state.rightPhase) * INTERNAL_TONE_LEVEL * params.volume;
-      state.leftPhase = (state.leftPhase + leftStep) % (2 * Math.PI);
-      state.rightPhase = (state.rightPhase + rightStep) % (2 * Math.PI);
-      left[i] = l;
-      right[i] = r;
-      leftEnergy += l * l;
-      rightEnergy += r * r;
-    }
-
-    state.leftRms = Math.sqrt(leftEnergy / left.length);
-    state.rightRms = Math.sqrt(rightEnergy / right.length);
-  };
-
-  node.connect(context.destination);
+  applyEngineParams(state);
   return state;
+}
+
+function applyEngineParams(state) {
+  if (!state) {
+    return;
+  }
+
+  const params = getParams();
+  const now = state.context.currentTime;
+  const gain = INTERNAL_TONE_LEVEL * params.volume;
+  state.leftOsc.frequency.setTargetAtTime(params.leftFreq, now, 0.05);
+  state.rightOsc.frequency.setTargetAtTime(params.rightFreq, now, 0.05);
+  state.leftGain.gain.setTargetAtTime(gain, now, 0.04);
+  state.rightGain.gain.setTargetAtTime(gain, now, 0.04);
+  state.leftRms = gain * 0.707;
+  state.rightRms = gain * 0.707;
 }
 
 async function startAudio() {
@@ -170,6 +182,7 @@ async function enterConsole() {
 function animate() {
   if (engine && playing) {
     updateLabels();
+    applyEngineParams(engine);
     const leftScale = Math.max(0.08, Math.min(1, engine.leftRms * 46));
     const rightScale = Math.max(0.08, Math.min(1, engine.rightRms * 46));
     els.leftMeter.style.transform = `scaleX(${leftScale})`;
@@ -195,8 +208,14 @@ els.beatPreset.addEventListener("change", () => {
 });
 
 [els.beat, els.carrier, els.volume, els.drift].forEach((input) => {
-  input.addEventListener("input", updateLabels);
-  input.addEventListener("change", updateLabels);
+  input.addEventListener("input", () => {
+    updateLabels();
+    applyEngineParams(engine);
+  });
+  input.addEventListener("change", () => {
+    updateLabels();
+    applyEngineParams(engine);
+  });
 });
 
 window.addEventListener("keydown", (event) => {
@@ -208,6 +227,10 @@ window.addEventListener("keydown", (event) => {
 window.addEventListener("beforeunload", () => {
   cancelAnimationFrame(animationId);
   if (audioContext) {
+    if (engine) {
+      engine.leftOsc.stop();
+      engine.rightOsc.stop();
+    }
     audioContext.close();
   }
 });
