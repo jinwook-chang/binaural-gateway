@@ -1,5 +1,7 @@
 const FIXED_GATEWAY_BEAT = 7.5;
 const INTERNAL_TONE_LEVEL = 0.18;
+const DRIFT_DEPTH_HZ = 3;
+const DRIFT_SPEED = 0.035;
 const beatPresets = new Map([
   ["4", "Deep Theta"],
   ["6", "Theta Drift"],
@@ -18,10 +20,12 @@ const els = {
   beat: document.querySelector("#beat"),
   carrier: document.querySelector("#carrier"),
   volume: document.querySelector("#volume"),
+  drift: document.querySelector("#drift"),
   presetOut: document.querySelector("#presetOut"),
   beatOut: document.querySelector("#beatOut"),
   carrierOut: document.querySelector("#carrierOut"),
   volumeOut: document.querySelector("#volumeOut"),
+  driftOut: document.querySelector("#driftOut"),
   leftHz: document.querySelector("#leftHz"),
   rightHz: document.querySelector("#rightHz"),
   deltaHz: document.querySelector("#deltaHz"),
@@ -34,15 +38,37 @@ let engine;
 let playing = false;
 let animationId;
 
+function fade(t) {
+  return t * t * t * (t * (t * 6 - 15) + 10);
+}
+
+function hashNoise(index) {
+  const x = Math.sin(index * 127.1 + 311.7) * 43758.5453123;
+  return (x - Math.floor(x)) * 2 - 1;
+}
+
+function smoothNoise(t) {
+  const i = Math.floor(t);
+  const f = t - i;
+  const a = hashNoise(i);
+  const b = hashNoise(i + 1);
+  return a + (b - a) * fade(f);
+}
+
 function getParams() {
   const beat = Number(els.beat.value);
   const carrier = Number(els.carrier.value);
+  const drift = els.drift.checked;
+  const driftValue = drift && audioContext ? smoothNoise(audioContext.currentTime * DRIFT_SPEED) * DRIFT_DEPTH_HZ : 0;
+  const activeCarrier = carrier + driftValue;
   return {
     beat,
     carrier,
-    leftFreq: carrier - beat / 2,
-    rightFreq: carrier + beat / 2,
+    activeCarrier,
+    leftFreq: activeCarrier - beat / 2,
+    rightFreq: activeCarrier + beat / 2,
     volume: Number(els.volume.value) / 100,
+    drift,
   };
 }
 
@@ -59,6 +85,7 @@ function updateLabels() {
   els.beatOut.value = hz(params.beat);
   els.carrierOut.value = hz(params.carrier);
   els.volumeOut.value = `${els.volume.value}%`;
+  els.driftOut.value = params.drift ? "ON" : "OFF";
   els.leftHz.textContent = hz(params.leftFreq);
   els.rightHz.textContent = hz(params.rightFreq);
   els.deltaHz.textContent = hz(params.beat);
@@ -166,8 +193,9 @@ els.beatPreset.addEventListener("change", () => {
   }
 });
 
-[els.beat, els.carrier, els.volume].forEach((input) => {
+[els.beat, els.carrier, els.volume, els.drift].forEach((input) => {
   input.addEventListener("input", updateLabels);
+  input.addEventListener("change", updateLabels);
 });
 
 window.addEventListener("keydown", (event) => {

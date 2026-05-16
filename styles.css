@@ -233,6 +233,10 @@ label {
   font-size: 0.9rem;
 }
 
+.switch-row {
+  align-content: start;
+}
+
 output {
   color: var(--ink);
   font-variant-numeric: tabular-nums;
@@ -242,6 +246,14 @@ select,
 input[type="range"] {
   grid-column: 1 / -1;
   width: 100%;
+}
+
+input[type="checkbox"] {
+  grid-column: 1 / -1;
+  width: 52px;
+  height: 28px;
+  margin: 0;
+  accent-color: var(--green);
 }
 
 select {
