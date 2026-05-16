@@ -1,0 +1,188 @@
+const FIXED_GATEWAY_BEAT = 7.5;
+const INTERNAL_TONE_LEVEL = 0.18;
+const beatPresets = new Map([
+  ["4", "Deep Theta"],
+  ["6", "Theta Drift"],
+  ["7.5", "Gateway Calm"],
+  ["8", "Low Alpha"],
+  ["10", "Alpha Focus"],
+  ["12", "Bright Focus"],
+]);
+
+const els = {
+  intro: document.querySelector("#intro"),
+  console: document.querySelector("#console"),
+  enter: document.querySelector("#enter"),
+  toggle: document.querySelector("#toggle"),
+  beatPreset: document.querySelector("#beatPreset"),
+  beat: document.querySelector("#beat"),
+  carrier: document.querySelector("#carrier"),
+  volume: document.querySelector("#volume"),
+  presetOut: document.querySelector("#presetOut"),
+  beatOut: document.querySelector("#beatOut"),
+  carrierOut: document.querySelector("#carrierOut"),
+  volumeOut: document.querySelector("#volumeOut"),
+  leftHz: document.querySelector("#leftHz"),
+  rightHz: document.querySelector("#rightHz"),
+  deltaHz: document.querySelector("#deltaHz"),
+  leftMeter: document.querySelector("#leftMeter"),
+  rightMeter: document.querySelector("#rightMeter"),
+};
+
+let audioContext;
+let engine;
+let playing = false;
+let animationId;
+
+function getParams() {
+  const beat = Number(els.beat.value);
+  const carrier = Number(els.carrier.value);
+  return {
+    beat,
+    carrier,
+    leftFreq: carrier - beat / 2,
+    rightFreq: carrier + beat / 2,
+    volume: Number(els.volume.value) / 100,
+  };
+}
+
+function hz(value) {
+  return `${value.toFixed(2).replace(/\.?0+$/, "")} Hz`;
+}
+
+function updateLabels() {
+  const params = getParams();
+  const presetKey = String(params.beat);
+  const presetName = beatPresets.get(presetKey) || "Custom";
+  els.beatPreset.value = beatPresets.has(presetKey) ? presetKey : "custom";
+  els.presetOut.value = presetName;
+  els.beatOut.value = hz(params.beat);
+  els.carrierOut.value = hz(params.carrier);
+  els.volumeOut.value = `${els.volume.value}%`;
+  els.leftHz.textContent = hz(params.leftFreq);
+  els.rightHz.textContent = hz(params.rightFreq);
+  els.deltaHz.textContent = hz(params.beat);
+}
+
+function createEngine() {
+  const context = new AudioContext();
+  const bufferSize = 2048;
+  const node = context.createScriptProcessor(bufferSize, 0, 2);
+  const state = {
+    context,
+    node,
+    leftPhase: 0,
+    rightPhase: 0,
+    leftRms: 0,
+    rightRms: 0,
+  };
+
+  node.onaudioprocess = (event) => {
+    const params = getParams();
+    const left = event.outputBuffer.getChannelData(0);
+    const right = event.outputBuffer.getChannelData(1);
+    const leftStep = (2 * Math.PI * params.leftFreq) / context.sampleRate;
+    const rightStep = (2 * Math.PI * params.rightFreq) / context.sampleRate;
+    let leftEnergy = 0;
+    let rightEnergy = 0;
+
+    for (let i = 0; i < left.length; i += 1) {
+      const l = Math.sin(state.leftPhase) * INTERNAL_TONE_LEVEL * params.volume;
+      const r = Math.sin(state.rightPhase) * INTERNAL_TONE_LEVEL * params.volume;
+      state.leftPhase = (state.leftPhase + leftStep) % (2 * Math.PI);
+      state.rightPhase = (state.rightPhase + rightStep) % (2 * Math.PI);
+      left[i] = l;
+      right[i] = r;
+      leftEnergy += l * l;
+      rightEnergy += r * r;
+    }
+
+    state.leftRms = Math.sqrt(leftEnergy / left.length);
+    state.rightRms = Math.sqrt(rightEnergy / right.length);
+  };
+
+  node.connect(context.destination);
+  return state;
+}
+
+async function startAudio() {
+  if (!audioContext) {
+    engine = createEngine();
+    audioContext = engine.context;
+  }
+  await audioContext.resume();
+  playing = true;
+  els.toggle.textContent = "PAUSE";
+  els.toggle.classList.remove("paused");
+  els.toggle.setAttribute("aria-label", "Pause");
+}
+
+async function toggleAudio() {
+  if (!audioContext) {
+    await startAudio();
+    return;
+  }
+
+  if (playing) {
+    await audioContext.suspend();
+    playing = false;
+    els.toggle.textContent = "PLAY";
+    els.toggle.classList.add("paused");
+    els.toggle.setAttribute("aria-label", "Play");
+  } else {
+    await startAudio();
+  }
+}
+
+async function enterConsole() {
+  els.intro.hidden = true;
+  els.console.hidden = false;
+  await startAudio();
+}
+
+function animate() {
+  if (engine && playing) {
+    const leftScale = Math.max(0.08, Math.min(1, engine.leftRms * 46));
+    const rightScale = Math.max(0.08, Math.min(1, engine.rightRms * 46));
+    els.leftMeter.style.transform = `scaleX(${leftScale})`;
+    els.rightMeter.style.transform = `scaleX(${rightScale})`;
+    els.leftMeter.style.opacity = String(Math.max(0.35, leftScale));
+    els.rightMeter.style.opacity = String(Math.max(0.35, rightScale));
+  } else {
+    els.leftMeter.style.transform = "scaleX(0.1)";
+    els.rightMeter.style.transform = "scaleX(0.1)";
+    els.leftMeter.style.opacity = "0.35";
+    els.rightMeter.style.opacity = "0.35";
+  }
+  animationId = requestAnimationFrame(animate);
+}
+
+els.enter.addEventListener("click", enterConsole);
+els.toggle.addEventListener("click", toggleAudio);
+els.beatPreset.addEventListener("change", () => {
+  if (els.beatPreset.value !== "custom") {
+    els.beat.value = els.beatPreset.value;
+    updateLabels();
+  }
+});
+
+[els.beat, els.carrier, els.volume].forEach((input) => {
+  input.addEventListener("input", updateLabels);
+});
+
+window.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !els.intro.hidden) {
+    enterConsole();
+  }
+});
+
+window.addEventListener("beforeunload", () => {
+  cancelAnimationFrame(animationId);
+  if (audioContext) {
+    audioContext.close();
+  }
+});
+
+els.beat.value = String(FIXED_GATEWAY_BEAT);
+updateLabels();
+animate();

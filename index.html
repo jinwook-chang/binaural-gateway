@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="CIA Gateway Process 공개 문서에서 영감을 받은 레트로 기밀문서 스타일 바이노럴 톤 페이지.">
+    <title>Gateway Signal</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="scanlines" aria-hidden="true"></div>
+
+    <main>
+      <section id="intro" class="intro-screen">
+        <div class="dossier">
+          <p class="stamp">Credential</p>
+          <h1>GATEWAY SIGNAL</h1>
+          <p class="subtitle">CIA Gateway Process inspired binaural tone</p>
+
+          <div class="briefing">
+            <p>
+              <a class="inline-link" href="https://www.cia.gov/readingroom/document/cia-rdp96-00788r001700210016-5" target="_blank" rel="noreferrer">Gateway Process</a>는
+              CIA 공개 문서에 등장하는 의식 탐사 프로그램입니다.
+              이는 명상, 신체 이완, 주파수 추종 반응을 이용해 평소와 다른 의식 상태에 접근하고자 하는 프로그램입니다.
+            </p>
+            <p>
+              주파수 추종 도구로 쓰인 것이 바이노럴 톤입니다.
+              왼쪽과 오른쪽 귀에 서로 다른 주파수를 들려주고, 그 차이를 통해 특정한 리듬을 유도합니다.
+            </p>
+            <p>
+              이 페이지는 그 방식의 가장 단순한 재현입니다.
+              Beat를 고르면 브라우저가 좌우 채널에 서로 다른 캐리어 톤을 보내며, 헤드폰을 통해 그 차이를 들을 수 있습니다.
+            </p>
+          </div>
+
+          <button id="enter" class="enter-button" type="button">진입</button>
+          <p class="footnote">헤드폰을 사용하세요. 볼륨은 낮게 시작하세요.</p>
+        </div>
+      </section>
+
+      <section id="console" class="console-screen" hidden>
+        <div class="console">
+          <header class="console-header">
+            <div>
+              <p class="stamp">SESSION ACTIVE</p>
+              <h2>Binaural Tone Console</h2>
+            </div>
+            <button id="toggle" class="transport" type="button" aria-label="Pause">PAUSE</button>
+          </header>
+
+          <div class="scope" aria-hidden="true">
+            <span id="leftMeter"></span>
+            <span id="rightMeter"></span>
+          </div>
+
+          <div class="controls">
+            <label>
+              추천 비트 <output id="presetOut">Gateway Calm</output>
+              <select id="beatPreset">
+                <option value="7.5">Gateway Calm · 7.5 Hz</option>
+                <option value="4">Deep Theta · 4 Hz</option>
+                <option value="6">Theta Drift · 6 Hz</option>
+                <option value="8">Low Alpha · 8 Hz</option>
+                <option value="10">Alpha Focus · 10 Hz</option>
+                <option value="12">Bright Focus · 12 Hz</option>
+                <option value="custom">Custom</option>
+              </select>
+            </label>
+
+            <label>
+              Beat <output id="beatOut">7.5 Hz</output>
+              <input id="beat" type="range" min="1" max="14" step="0.1" value="7.5">
+            </label>
+
+            <label>
+              Carrier <output id="carrierOut">100 Hz</output>
+              <input id="carrier" type="range" min="60" max="300" step="1" value="100">
+            </label>
+
+            <label>
+              Volume <output id="volumeOut">35%</output>
+              <input id="volume" type="range" min="0" max="100" step="1" value="35">
+            </label>
+          </div>
+
+          <div class="readout">
+            <span>LEFT <b id="leftHz">96.25 Hz</b></span>
+            <span>RIGHT <b id="rightHz">103.75 Hz</b></span>
+            <span>DELTA <b id="deltaHz">7.5 Hz</b></span>
+          </div>
+
+          <a class="source" href="https://www.cia.gov/readingroom/document/cia-rdp96-00788r001700210016-5" target="_blank" rel="noreferrer">
+            CIA Reading Room: Analysis and Assessment of Gateway Process
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
