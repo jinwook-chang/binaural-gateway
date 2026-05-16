@@ -1,17 +1,6 @@
 # Gateway Signal
 
-Gateway Signal is a static binaural tone page inspired by the CIA Gateway Process documents.
-
-It presents a retro classified-file entry screen, then opens a simple tone console that sends slightly different carrier frequencies to the left and right channels. Use headphones; without separate left/right playback, the binaural effect will not work as intended.
-
-## What It Does
-
-- Explains the Gateway Process context in Korean.
-- Links to the CIA Reading Room source document.
-- Plays browser-generated binaural tones.
-- Lets you choose recommended beat presets or tune the beat manually.
-- Controls carrier frequency and volume.
-- Runs as plain HTML/CSS/JS with no build step.
+Gateway Signal is a binaural tone page inspired by the CIA Gateway Process documents.
 
 ## Controls
 
